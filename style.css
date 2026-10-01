@@ -391,3 +391,9 @@ h1, h2, h3, p { margin: 0; }
 .boite p { color: var(--gris); line-height: 1.45; font-size: .9rem; white-space: pre-line; }
 .toast { position: absolute; left: 50%; bottom: 96px; transform: translate(-50%, 20px); z-index: 70; max-width: 88%; background: var(--bleu-fonce); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: .88rem; text-align: center; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; border-bottom: 3px solid var(--or); }
 .toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
+/* Partage par QR code (Paramètres) */
+.partage { text-align: center; border-bottom: 5px solid var(--or); }
+.partage img { width: 190px; image-rendering: pixelated; }
+.partage p { font-size: .84rem; color: var(--gris); margin: 6px 0 4px; line-height: 1.4; }
+.partage b { color: var(--bleu); }

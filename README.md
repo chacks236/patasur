@@ -4,6 +4,10 @@ Prototype à l'apparence d'une application mobile : caméra ou photo → modèle
 Authentique / Suspect / Incertain, avec un score pour chaque critère de sécurité.
 **Ce n'est pas un outil de vérification officiel.**
 
+**En ligne :** https://chacks236.github.io/patasur/ (HTTPS : la caméra fonctionne directement sur téléphone,
+sans PC ni réglage Chrome). Le QR code est dans Paramètres → Partager l'application.
+Pour publier une modification : `git add . && git commit -m "..." && git push` dans ce dossier.
+
 Charte graphique du site de la BEAC (bleu #005ca6, or #c2a712, crème, polices Avenir / Open Sans).
 Pendant un scan, un rayon lumineux balaie le billet à l'écran, puis le verdict s'affiche.
 
