@@ -12,6 +12,7 @@ const CHEMIN_CLASSES = "model/classes.json";
 // bien plus rapide que GitHub Pages sur les réseaux mobiles. Le lien est figé sur
 // le commit qui contient les morceaux (contenu immuable, mis en cache longtemps).
 const MORCEAUX_MODELE = [0, 1, 2].map((i) => `model/parts/best.onnx.part${i}`);
+const TAILLE_MODELE = 38381664;   // octets (le CDN n'indique pas toujours la taille)
 const CDN_MODELE = "https://cdn.jsdelivr.net/gh/chacks236/patasur@b3095a16925844b0260109caec112e1ed94893f8/";
 const EN_LOCAL = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) || /^(10|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(location.hostname);
 const CLE_REGLAGES = "patasur.reglages";
@@ -128,14 +129,14 @@ function majChargement(p, texte) {
 
 // Télécharge plusieurs fichiers en parallèle avec une progression commune,
 // puis les met bout à bout (un seul fichier = cas simple).
-async function telechargerAvecProgression(urls) {
+async function telechargerAvecProgression(urls, tailleConnue = 0) {
   const reps = await Promise.all(urls.map(async (url) => {
     const rep = await fetch(url);
     if (!rep.ok) throw new Error(`Fichier introuvable : ${url} (code ${rep.status})`);
     return rep;
   }));
   const tailles = reps.map((r) => +r.headers.get("Content-Length") || 0);
-  const total = tailles.every((t) => t) ? tailles.reduce((a, b) => a + b, 0) : 0;
+  const total = tailles.every((t) => t) ? tailles.reduce((a, b) => a + b, 0) : tailleConnue;
   let recu = 0;
   const parties = await Promise.all(reps.map(async (rep) => {
     const lecteur = rep.body.getReader();
@@ -144,7 +145,7 @@ async function telechargerAvecProgression(urls) {
       const { done, value } = await lecteur.read();
       if (done) break;
       morceaux.push(value); recu += value.length;
-      if (total) majChargement(5 + (80 * recu) / total, `Téléchargement du modèle d'IA… ${Math.round((100 * recu) / total)} %`);
+      if (total) majChargement(5 + (80 * Math.min(recu, total)) / total, `Téléchargement du modèle d'IA… ${Math.min(100, Math.round((100 * recu) / total))} %`);
     }
     return morceaux;
   }));
@@ -158,10 +159,10 @@ async function telechargerAvecProgression(urls) {
 async function telechargerModele() {
   if (EN_LOCAL) return telechargerAvecProgression([CHEMIN_MODELE]);
   try {
-    return await telechargerAvecProgression(MORCEAUX_MODELE.map((m) => CDN_MODELE + m));
+    return await telechargerAvecProgression(MORCEAUX_MODELE.map((m) => CDN_MODELE + m), TAILLE_MODELE);
   } catch (e) {
     console.warn("CDN indisponible, téléchargement depuis le site :", e);
-    return telechargerAvecProgression(MORCEAUX_MODELE);
+    return telechargerAvecProgression(MORCEAUX_MODELE, TAILLE_MODELE);
   }
 }
 
