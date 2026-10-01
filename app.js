@@ -8,6 +8,12 @@
 const D = window.Detection;
 const CHEMIN_MODELE = "model/best.onnx";
 const CHEMIN_CLASSES = "model/classes.json";
+// En ligne, le modèle est servi en 3 morceaux (< 20 Mo chacun) par le CDN jsDelivr,
+// bien plus rapide que GitHub Pages sur les réseaux mobiles. Le lien est figé sur
+// le commit qui contient les morceaux (contenu immuable, mis en cache longtemps).
+const MORCEAUX_MODELE = [0, 1, 2].map((i) => `model/parts/best.onnx.part${i}`);
+const CDN_MODELE = "https://cdn.jsdelivr.net/gh/chacks236/patasur@b3095a16925844b0260109caec112e1ed94893f8/";
+const EN_LOCAL = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) || /^(10|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(location.hostname);
 const CLE_REGLAGES = "patasur.reglages";
 const CLE_HIST = "patasur.historique";
 const MAX_HIST = 40;
@@ -120,21 +126,43 @@ function majChargement(p, texte) {
   if (!modelePret && !erreurModele) $("etatModele").querySelector("b").textContent = `Chargement ${Math.round(progression)} %`;
 }
 
-async function telechargerAvecProgression(url) {
-  const rep = await fetch(url);
-  if (!rep.ok) throw new Error(`Fichier introuvable : ${url} (code ${rep.status})`);
-  const total = +rep.headers.get("Content-Length") || 0;
-  const lecteur = rep.body.getReader();
-  const morceaux = []; let recu = 0;
-  for (;;) {
-    const { done, value } = await lecteur.read();
-    if (done) break;
-    morceaux.push(value); recu += value.length;
-    if (total) majChargement(5 + (80 * recu) / total, `Téléchargement du modèle d'IA… ${Math.round((100 * recu) / total)} %`);
-  }
+// Télécharge plusieurs fichiers en parallèle avec une progression commune,
+// puis les met bout à bout (un seul fichier = cas simple).
+async function telechargerAvecProgression(urls) {
+  const reps = await Promise.all(urls.map(async (url) => {
+    const rep = await fetch(url);
+    if (!rep.ok) throw new Error(`Fichier introuvable : ${url} (code ${rep.status})`);
+    return rep;
+  }));
+  const tailles = reps.map((r) => +r.headers.get("Content-Length") || 0);
+  const total = tailles.every((t) => t) ? tailles.reduce((a, b) => a + b, 0) : 0;
+  let recu = 0;
+  const parties = await Promise.all(reps.map(async (rep) => {
+    const lecteur = rep.body.getReader();
+    const morceaux = [];
+    for (;;) {
+      const { done, value } = await lecteur.read();
+      if (done) break;
+      morceaux.push(value); recu += value.length;
+      if (total) majChargement(5 + (80 * recu) / total, `Téléchargement du modèle d'IA… ${Math.round((100 * recu) / total)} %`);
+    }
+    return morceaux;
+  }));
   const octets = new Uint8Array(recu);
-  let pos = 0; for (const m of morceaux) { octets.set(m, pos); pos += m.length; }
+  let pos = 0;
+  for (const morceaux of parties) for (const m of morceaux) { octets.set(m, pos); pos += m.length; }
   return octets;
+}
+
+// En local : fichier entier (rapide). En ligne : morceaux via jsDelivr, sinon depuis le site.
+async function telechargerModele() {
+  if (EN_LOCAL) return telechargerAvecProgression([CHEMIN_MODELE]);
+  try {
+    return await telechargerAvecProgression(MORCEAUX_MODELE.map((m) => CDN_MODELE + m));
+  } catch (e) {
+    console.warn("CDN indisponible, téléchargement depuis le site :", e);
+    return telechargerAvecProgression(MORCEAUX_MODELE);
+  }
 }
 
 async function chargerModele() {
@@ -151,7 +179,7 @@ async function chargerModele() {
   prep.width = prep.height = IMGSZ;
   tampon = new Float32Array(3 * IMGSZ * IMGSZ);
 
-  const octets = await telechargerAvecProgression(CHEMIN_MODELE);
+  const octets = await telechargerModele();
   majChargement(88, "Préparation du modèle…");
 
   // Fichiers WebAssembly d'ONNX Runtime depuis le même CDN que le script
