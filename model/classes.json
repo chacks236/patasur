@@ -1,0 +1,17 @@
+{
+  "classes": [
+    "FAUX",
+    "VRAI",
+    "FIL_SECU_V",
+    "FIL_SECU_F",
+    "MOTIF_3D_V",
+    "MOTIF_3D_F",
+    "NUM_SERIE_V",
+    "NUM_SERIE_F",
+    "NUM_SERIE_ITA_V",
+    "NUM_SERIE_ITA_F",
+    "VALEUR_V"
+  ],
+  "imgsz": 960,
+  "seuil_conseille": 0.5
+}

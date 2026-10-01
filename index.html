@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#005ca6">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PATASUR">
+  <meta name="description" content="PATASUR : détection des faux billets FCFA de la zone CEMAC par intelligence artificielle - BEAFRICA GLOBUS CONSULTING">
+  <title>PATASUR</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <!-- Polices du site de la BEAC : Avenir (si installée sur l'appareil), sinon Open Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <!-- ONNX Runtime Web 1.30.0 (bundle WebGPU : utilise la carte graphique si possible, sinon le processeur) -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.webgpu.min.js"></script>
+</head>
+<body>
+<div class="telephone" id="app">
+
+  <!-- ============ ÉCRAN DE DÉMARRAGE ============ -->
+  <section id="splash" class="splash">
+    <div class="splash-centre">
+      <div class="splash-billet"><img src="img/billet-10000.jpg" alt="Billet de 10 000 FCFA"><span class="reflet"></span></div>
+      <h1>PATASUR</h1>
+      <p>Vérification des billets FCFA<br>par intelligence artificielle</p>
+    </div>
+    <div class="splash-bas">
+      <div class="barre"><span id="splashBarre"></span></div>
+      <p id="splashTexte">Démarrage…</p>
+      <small>BEAFRICA GLOBUS CONSULTING</small>
+    </div>
+    <div class="bandes"><i></i><i></i></div>
+  </section>
+
+  <!-- ============ ÉCRANS PRINCIPAUX ============ -->
+  <main class="ecrans">
+
+    <!-- ----- ACCUEIL / SCANNER ----- -->
+    <section class="ecran actif" id="ecran-scanner">
+      <header class="entete">
+        <div class="marque">
+          <img class="logo" src="img/billet-logo.jpg" alt="">
+          <div>
+            <h1>PATASUR</h1>
+            <small>Vérification des billets FCFA</small>
+          </div>
+        </div>
+        <span class="puce-etat chargement" id="etatModele"><i></i><b>Chargement</b></span>
+      </header>
+      <div class="bandeau-bleu">Zone CEMAC · Billets de la gamme 2020</div>
+
+      <div class="contenu">
+        <div class="hero">
+          <div class="hero-billet"><img src="img/billet-10000.jpg" alt="Billet de 10 000 FCFA, gamme 2020"><span class="reflet"></span></div>
+          <h2 class="titre-or">Vérifiez un billet en quelques secondes</h2>
+          <p>Cadrez le billet : l'intelligence artificielle analyse ses éléments de sécurité et vous donne un verdict.</p>
+        </div>
+
+        <div class="etape"><span class="num">1</span><span>Choisir le mode</span><span class="coche">✓</span></div>
+        <div class="grille-3">
+          <button class="tuile choisie" data-mode="standard">
+            <span class="tuile-icone"><svg viewBox="0 0 24 24"><path d="M4 10h3v7H4zm6.5 0h3v7h-3zM2 19h20v3H2zm15-9h3v7h-3zm-5-9L2 6v2h20V6z"/></svg></span>
+            <span>Billets</span>
+          </button>
+          <button class="tuile" data-mode="vocal">
+            <span class="tuile-icone"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg></span>
+            <span>Mode vocal</span>
+          </button>
+          <button class="tuile" data-aller="guide">
+            <span class="tuile-icone"><svg viewBox="0 0 24 24"><path d="M12 3 1 9l11 6 9-4.9V17h2V9L12 3zM5 13.2v4L12 21l7-3.8v-4L12 17l-7-3.8z"/></svg></span>
+            <span>Apprendre</span>
+          </button>
+        </div>
+        <p class="aide-mode" id="aideMode">Analyse visuelle du billet avec un score pour chaque critère de sécurité.</p>
+
+        <div class="etape"><span class="num">2</span><span>Choisir la méthode de scan</span></div>
+        <div class="grille-2">
+          <button class="methode" id="btnCameraDirect">
+            <span class="methode-icone"><svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM9 2 7.2 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.2L15 2H9zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/></svg></span>
+            <span>Scanner un billet</span>
+          </button>
+          <button class="methode" id="btnGalerie">
+            <span class="methode-icone"><svg viewBox="0 0 24 24"><path d="M22 16V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2zm-11-4 2 2.7 3-3.7 4 5H8l3-4zM2 6v14a2 2 0 0 0 2 2h14v-2H4V6H2z"/></svg></span>
+            <span>Depuis la galerie</span>
+          </button>
+        </div>
+        <button class="methode large" id="btnRectoVerso">
+          <span class="badge-meilleur">✔ Recommandé</span>
+          <span class="methode-icone"><svg viewBox="0 0 24 24"><path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5v2h2V1h-2v2zm0 15H5l5-6v6zm9-15h-5v2h5v13l-5-6v9h5a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg></span>
+          <span>Scanner les deux côtés</span>
+          <small>Recto puis verso : verdict plus fiable</small>
+        </button>
+
+        <div class="panneau bleu">
+          <div class="panneau-titre">Conseil</div>
+          <p>💡 Un bon éclairage, un billet à plat qui remplit le cadre, sans reflet.</p>
+        </div>
+
+        <div class="panneau or">
+          <div class="panneau-titre">Alertes <svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.1-1.6-5.6-4.5-6.3V4a1.5 1.5 0 0 0-3 0v.7C7.6 5.4 6 7.9 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div>
+          <div class="alerte">
+            <b>Billets de la gamme 2020</b>
+            <p>Vérifiez toujours le fil de sécurité et le motif 3D, deux éléments que PATASUR analyse.</p>
+            <small>Exemple d'alerte : en production, diffusée dès l'annonce officielle</small>
+          </div>
+        </div>
+
+        <p class="avertissement">Aide à la décision, pas une preuve légale. En cas de doute, faites vérifier le billet en banque.</p>
+      </div>
+    </section>
+
+    <!-- ----- HISTORIQUE ----- -->
+    <section class="ecran" id="ecran-historique">
+      <header class="entete simple"><nav class="fil">Accueil › <b>Historique</b></nav><h1 class="titre-or">Historique</h1></header>
+      <div class="contenu">
+        <div id="listeHistorique" class="liste-historique"></div>
+        <div id="videHistorique" class="vide">
+          <img src="img/billet-logo.jpg" alt="">
+          <h2>Pas encore de scan</h2>
+          <p>Les billets que vous vérifiez apparaîtront ici</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----- GUIDE ----- -->
+    <section class="ecran" id="ecran-guide">
+      <header class="entete simple"><nav class="fil">Accueil › <b>Guide</b></nav><h1 class="titre-or">Signes de sécurité</h1></header>
+      <div class="contenu">
+        <div class="onglets-int">
+          <button class="actif" data-sous="criteres">Critères</button>
+          <button data-sous="gestes">Bons gestes</button>
+        </div>
+        <div id="sous-criteres" class="sous actif">
+          <p class="intro">Éléments de sécurité des billets FCFA. Les critères marqués <span class="tag ia">IA</span> sont déjà analysés par le modèle.</p>
+          <div id="listeGuide"></div>
+        </div>
+        <div id="sous-gestes" class="sous">
+          <div class="carte geste"><b>1. Regarder</b><p>Inclinez le billet : les éléments optiques changent d'aspect. Un motif plat et terne est suspect.</p></div>
+          <div class="carte geste"><b>2. Toucher</b><p>Le papier d'un vrai billet est ferme et l'impression en relief se sent sous le doigt.</p></div>
+          <div class="carte geste"><b>3. Observer à contre-jour</b><p>Le filigrane et le fil de sécurité apparaissent nettement par transparence.</p></div>
+          <div class="carte geste"><b>4. Comparer</b><p>En cas de doute, comparez avec un billet dont vous êtes sûr, puis scannez les deux côtés.</p></div>
+          <div class="carte geste rouge"><b>Billet suspect ?</b><p>Ne le remettez pas en circulation. Apportez-le à votre banque ou au commissariat le plus proche.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----- TABLEAU DE BORD (autorités) ----- -->
+    <section class="ecran" id="ecran-tableau">
+      <header class="entete simple"><nav class="fil">Accueil › <b>Autorités</b></nav><h1 class="titre-or">Tableau de bord</h1><small class="sous-entete">Vue autorités monétaires (démonstration)</small></header>
+      <div class="contenu">
+        <div class="kpis">
+          <div class="kpi"><b id="kTotal">0</b><span>Scans</span></div>
+          <div class="kpi rouge"><b id="kFaux">0</b><span>Faux</span></div>
+          <div class="kpi orange"><b id="kDoute">0</b><span>Incertains</span></div>
+          <div class="kpi vert"><b id="kVrai">0</b><span>Vrais</span></div>
+        </div>
+        <div class="panneau bleu">
+          <div class="panneau-titre">Taux de billets suspects</div>
+          <div class="jauge"><span id="jaugeFaux"></span></div>
+          <p class="petit" id="txtTaux">Aucun scan pour l'instant.</p>
+        </div>
+        <div class="panneau bleu">
+          <div class="panneau-titre">Critères les plus souvent douteux</div>
+          <div id="barresCriteres" class="barres"></div>
+        </div>
+        <div class="panneau or">
+          <div class="panneau-titre">Signalements</div>
+          <div class="alerte">
+            <p class="gros-chiffre"><b id="kSignal">0</b> signalement(s) transmis</p>
+            <p class="petit">Version institutionnelle : cartographie des zones touchées et tendances, à partir de signalements anonymisés et consentis.</p>
+          </div>
+        </div>
+        <p class="avertissement">Données calculées sur cet appareil uniquement, pour la démonstration.</p>
+      </div>
+    </section>
+
+    <!-- ----- PARAMÈTRES ----- -->
+    <section class="ecran" id="ecran-parametres">
+      <header class="entete simple"><nav class="fil">Accueil › <b>Paramètres</b></nav><h1 class="titre-or">Paramètres</h1></header>
+      <div class="contenu">
+        <div class="titre-groupe">Détection</div>
+        <div class="carte reglage">
+          <label for="seuil">Seuil de décision <b id="seuilValeur">0.50</b></label>
+          <input id="seuil" type="range" min="0.25" max="0.90" step="0.05" value="0.50">
+          <small>En dessous du seuil, le billet est jugé « incertain ». Plus haut = plus prudent.</small>
+        </div>
+        <div class="carte ligne"><span>Moteur d'IA</span><b id="moteur">–</b></div>
+        <div class="carte ligne"><span>Temps d'analyse</span><b><span id="ms">–</span> ms</b></div>
+
+        <div class="titre-groupe">Accessibilité</div>
+        <label class="carte ligne interrupteur"><span><b>Lecture vocale du résultat</b><small>Dit « vrai billet » ou « faux billet »</small></span><input type="checkbox" id="optVoix"><i></i></label>
+        <label class="carte ligne interrupteur"><span><b>Mode malvoyant</b><small>Annonce automatique pendant le scan en direct</small></span><input type="checkbox" id="optVocal"><i></i></label>
+        <label class="carte ligne interrupteur"><span><b>Vibration</b><small>Vibre si un billet suspect est détecté</small></span><input type="checkbox" id="optVibre"><i></i></label>
+        <button class="carte ligne fleche" id="btnTestVoix"><span><b>Tester la voix</b><small>Français · langues locales prévues</small></span><span>›</span></button>
+
+        <div class="titre-groupe">Données</div>
+        <button class="carte ligne fleche" id="btnExporter"><span class="avec-icone"><i class="rond-or">⬆</i><span><b>Exporter l'historique</b><small>Enregistre vos scans dans un fichier</small></span></span><span>›</span></button>
+        <button class="carte ligne fleche" id="btnEffacer"><span class="avec-icone"><i class="rond-or">🗑</i><span><b>Effacer l'historique</b><small>Supprime les scans de cet appareil</small></span></span><span>›</span></button>
+
+        <div class="titre-groupe">Informations sur l'application</div>
+        <div class="carte ligne"><span class="avec-icone"><img class="mini-logo" src="img/billet-logo.jpg" alt=""><span><b>PATASUR</b><small>Version 1.0 · prototype</small></span></span></div>
+        <div class="panneau or">
+          <div class="panneau-titre">À propos</div>
+          <div class="alerte">
+            <b>BEAFRICA GLOBUS CONSULTING (BGC)</b>
+            <p>Concepteur et porteur du projet : Evrard Chanel KODAMBA<br>Bangui, République centrafricaine</p>
+            <p class="petit">L'application est une aide à la décision et ne remplace pas une vérification officielle par une banque ou la BEAC.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ BARRE DE NAVIGATION ============ -->
+  <nav class="navigation">
+    <button class="actif" data-onglet="scanner"><span class="nav-icone"><svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM9 2 7.2 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.2L15 2H9z"/></svg></span>Scanner</button>
+    <button data-onglet="historique"><span class="nav-icone"><svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 2.1 5l-1.4 1.4A9 9 0 1 0 13 3zm-1 5v5l4.3 2.5.7-1.2-3.5-2.1V8H12z"/></svg></span>Historique</button>
+    <button data-onglet="guide"><span class="nav-icone"><svg viewBox="0 0 24 24"><path d="M21 5c-1.1-.4-2.3-.5-3.5-.5-2 0-4 .4-5.5 1.5-1.5-1.1-3.5-1.5-5.5-1.5S2.5 4.9 1 6v14.6c1.5-1.1 3.5-1.5 5.5-1.5s4 .4 5.5 1.5c1.5-1.1 3.5-1.5 5.5-1.5 1.200 0 2.4.1 3.5.5V5zm0 13.5c-1.1-.3-2.3-.5-3.5-.5-1.7 0-4.2.7-5.5 1.5V8c1.3-.8 3.8-1.5 5.5-1.5 1.2 0 2.4.2 3.5.5v11.5z"/></svg></span>Guide</button>
+    <button data-onglet="tableau"><span class="nav-icone"><svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg></span>Autorités</button>
+    <button data-onglet="parametres"><span class="nav-icone"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.3 7.3 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.6h4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5-2.3-1.6zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></span>Paramètres</button>
+  </nav>
+
+  <!-- ============ CAMÉRA PLEIN ÉCRAN ============ -->
+  <section id="camera" class="camera cache">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="calque"></canvas>
+    <div class="visee"><i></i><i></i><i></i><i></i></div>
+    <div class="cam-haut">
+      <button class="rond" id="btnFermerCam" aria-label="Fermer">✕</button>
+      <div id="pillule" class="pillule aucun">Recherche d'un billet…</div>
+      <span class="stats-cam"><span id="fps">–</span> img/s</span>
+    </div>
+    <div class="cam-bas">
+      <p id="consigne">Cadrez le billet dans le rectangle</p>
+      <div class="cam-boutons">
+        <button class="rond" id="btnGalerieCam" aria-label="Galerie"><svg viewBox="0 0 24 24"><path d="M22 16V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2zm-11-4 2 2.7 3-3.7 4 5H8l3-4zM2 6v14a2 2 0 0 0 2 2h14v-2H4V6H2z"/></svg></button>
+        <button class="declencheur" id="btnCapture" aria-label="Analyser"><span></span></button>
+        <button class="rond" id="btnRetourner" aria-label="Changer de caméra"><svg viewBox="0 0 24 24"><path d="M20 5h-3.2L15 3H9L7.2 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 0 1-5-5H5l2.5-2.5L10 13H8a4 4 0 0 0 6.6 3l.7.7A5 5 0 0 1 12 18zm4.5-2.5L14 13h2a4 4 0 0 0-6.6-3l-.7-.7A5 5 0 0 1 17 13h2l-2.5 2.5z"/></svg></button>
+      </div>
+      <div class="etapes-rv" id="etapesRV"><span class="actif">Recto</span><span>Verso</span></div>
+    </div>
+  </section>
+
+  <!-- ============ ANALYSE EN COURS (rayon lumineux) ============ -->
+  <section id="analyse" class="analyse cache">
+    <div class="analyse-entete"><b>PATASUR</b><span id="analyseFace">Analyse du billet</span></div>
+    <div class="analyse-cadre" id="analyseCadre">
+      <canvas id="analyseImage"></canvas>
+      <div class="grille-scan"></div>
+      <div class="rayon"><span></span></div>
+      <i class="coin"></i><i class="coin"></i><i class="coin"></i><i class="coin"></i>
+    </div>
+    <p class="analyse-etape" id="analyseEtape">Détection du billet…</p>
+    <div class="analyse-barre"><span id="analyseProg"></span></div>
+    <ul class="analyse-liste" id="analyseListe"></ul>
+  </section>
+
+  <!-- ============ RÉSULTAT ============ -->
+  <section id="resultat" class="resultat cache">
+    <header class="entete-res">
+      <button class="rond clair" id="btnFermerRes" aria-label="Retour">←</button>
+      <h2 class="titre-or">Résultat de l'analyse</h2>
+      <button class="rond clair" id="btnParler" aria-label="Écouter">🔊</button>
+    </header>
+    <div class="contenu">
+      <div id="carteVerdict" class="carte-verdict">
+        <div class="anneau" id="anneau"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" class="fond-anneau"/><circle cx="18" cy="18" r="15.9" class="val-anneau" id="valAnneau"/></svg><b id="txtAnneau">–</b></div>
+        <div>
+          <h3 id="titreVerdict">–</h3>
+          <p id="sousVerdict"></p>
+        </div>
+      </div>
+      <div id="imagesRes" class="images-res"></div>
+
+      <div class="titre-section">Critères de sécurité analysés</div>
+      <ul id="listeCriteres" class="criteres"></ul>
+
+      <div class="panneau bleu formule">
+        <div class="panneau-titre">Score de conformité pondéré</div>
+        <p class="petit">S = Σ wᵢ · pᵢ : moyenne pondérée des critères visibles (poids égaux dans ce prototype, à fixer avec la BEAC). Le verdict affiché reste celui du modèle global ; ce score deviendra le verdict pondéré une fois le modèle entraîné sur davantage d'images de chaque critère.</p>
+        <p class="gros-chiffre"><b id="txtS">–</b></p>
+      </div>
+
+      <div class="actions">
+        <button class="bouton secondaire" id="btnSignaler">🚩 Signaler</button>
+        <button class="bouton primaire" id="btnNouveau">Nouveau scan</button>
+      </div>
+      <p class="avertissement">Aide à la décision, pas une preuve légale. En cas de doute, faites vérifier le billet en banque.</p>
+    </div>
+  </section>
+
+  <!-- Boîte de dialogue -->
+  <div id="dialogue" class="dialogue cache">
+    <div class="boite">
+      <h3 id="dlgTitre"></h3>
+      <p id="dlgTexte"></p>
+      <div class="actions"><button class="bouton secondaire" id="dlgNon">Annuler</button><button class="bouton primaire" id="dlgOui">Confirmer</button></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <input id="inputPhoto" type="file" accept="image/*" hidden>
+</div>
+
+<script src="detection.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

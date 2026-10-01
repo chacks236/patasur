@@ -1,0 +1,5 @@
+# Fichiers locaux inutiles en ligne
+lancer_serveur.bat
+*.tmp
+Thumbs.db
+.DS_Store
